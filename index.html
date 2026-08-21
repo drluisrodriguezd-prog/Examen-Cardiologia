@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Examen Cardiología — Residencia Medicina Interna</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{
+    --dark:#1A3A5C;--med:#2471A3;--light:#D6EAF8;--gray:#F4F6F7;
+    --green:#1E8449;--gbg:#D5F5E3;--red:#C0392B;--rbg:#FFEBEE;
+    --amber:#CA6F1E;--abg:#FEF9E7;--text:#2C3E50;--muted:#7F8C8D;
+    --r:12px;
+  }
+  html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#EBF5FB;color:var(--text);line-height:1.5}
+  .app{max-width:560px;margin:0 auto;min-height:100vh;background:#fff;display:flex;flex-direction:column}
+
+  /* HEADER */
+  .hdr{background:var(--dark);padding:14px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+  .hdr-icon{width:38px;height:38px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .hdr-icon svg{width:26px;height:26px}
+  .hdr-txt{flex:1}
+  .hdr-txt h1{font-size:14px;font-weight:600;color:#fff;line-height:1.2}
+  .hdr-txt p{font-size:11px;color:#AED6F1;margin-top:2px}
+  .qr-btn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .qr-btn:hover{background:rgba(255,255,255,.25)}
+  .timer{font-size:15px;font-weight:700;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.15);font-variant-numeric:tabular-nums;display:none;flex-shrink:0}
+  .timer.show{display:block}
+  .timer.warn{background:var(--red);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+  .progress-wrap{height:4px;background:var(--gray)}
+  .progress-bar{height:100%;background:var(--med);transition:width .3s}
+
+  /* SCREENS */
+  .screen{flex:1;padding:22px 18px;display:none}
+  .screen.active{display:block}
+
+  /* REGISTER */
+  .reg-title{font-size:22px;font-weight:700;color:var(--dark);margin-bottom:6px}
+  .reg-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--dark);margin-bottom:7px}
+  .field input{width:100%;padding:13px;font-size:16px;border:1.5px solid #ccc;border-radius:10px;outline:none;transition:border .2s}
+  .field input:focus{border-color:var(--med)}
+  .grade-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .grade-opt{padding:13px 8px;text-align:center;border:1.5px solid #ccc;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+  .grade-opt.sel{background:var(--med);color:#fff;border-color:var(--med)}
+  .info-box{background:var(--light);border-radius:10px;padding:13px 15px;font-size:13px;color:var(--dark);margin-bottom:16px}
+  .info-box b{display:block;margin-bottom:4px}
+  .info-box ul{margin:5px 0 0 16px}
+  .info-box li{margin-bottom:3px}
+  .warn-box{background:var(--abg);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:11px 14px;font-size:13px;color:#7a3f08;margin-bottom:22px}
+
+  /* BUTTONS */
+  .btn{width:100%;padding:15px;font-size:16px;font-weight:600;border:none;border-radius:var(--r);cursor:pointer;transition:transform .1s,opacity .2s}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--med);color:#fff}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-dark{background:var(--dark);color:#fff}
+  .btn-outline{background:#fff;color:var(--med);border:1.5px solid var(--med)}
+  .btn-amber{background:var(--amber);color:#fff}
+  .btn-sm{padding:11px;font-size:14px}
+  .spacer{height:12px}
+
+  /* QUESTION */
+  .q-counter{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .q-topic{display:inline-block;font-size:11px;background:var(--light);color:var(--dark);padding:3px 10px;border-radius:20px;margin-bottom:14px;font-weight:600}
+  .q-vignette{background:var(--gray);border-left:3px solid var(--med);padding:11px 13px;border-radius:0 8px 8px 0;margin-bottom:14px;font-size:15px;color:#444}
+  .q-text{font-size:16px;color:var(--text);margin-bottom:18px;line-height:1.55}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{padding:13px 15px;border:1.5px solid #ddd;border-radius:var(--r);font-size:15px;cursor:pointer;display:flex;gap:11px;align-items:flex-start;transition:all .15s}
+  .opt:active{background:var(--gray)}
+  .opt.sel{border-color:var(--med);background:var(--light)}
+  .opt-letter{font-weight:700;color:var(--med);flex-shrink:0;width:20px}
+  .opt.sel .opt-letter{color:var(--dark)}
+  .nav-btns{display:flex;gap:10px;margin-top:22px}
+  .nav-btns .btn{flex:1}
+  .map-link{text-align:center;margin-top:14px}
+  .map-link button{background:none;border:none;color:var(--med);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline}
+  .answered-note{font-size:11px;color:var(--muted);text-align:center;margin-top:12px}
+
+  /* NAV GRID */
+  .nav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:14px 0}
+  .nav-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid #ddd;transition:all .15s}
+  .nav-cell.answered{background:var(--gbg);border-color:var(--green);color:var(--green)}
+  .nav-cell.pending{background:var(--rbg);border-color:var(--red);color:var(--red)}
+  .nav-cell.current{outline:3px solid var(--med);outline-offset:1px}
+  .nav-legend{display:flex;gap:14px;justify-content:center;margin:10px 0;font-size:12px}
+  .nav-legend span{display:flex;align-items:center;gap:5px}
+  .nav-legend .dot{width:11px;height:11px;border-radius:3px}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:100}
+  .modal-overlay.show{display:flex}
+  .modal{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:22px 18px;max-height:88vh;overflow-y:auto;animation:slideUp .25s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal h3{font-size:17px;color:var(--dark);margin-bottom:6px}
+  .modal p.sub{font-size:13px;color:var(--muted);margin-bottom:10px}
+
+  /* QR MODAL */
+  .qr-wrap{display:flex;flex-direction:column;align-items:center;padding:16px 0}
+  .qr-wrap #qrcode{margin:0 auto 16px}
+  .qr-url{font-size:11px;color:var(--muted);text-align:center;word-break:break-all;max-width:280px}
+  .qr-note{font-size:13px;color:var(--dark);text-align:center;margin-bottom:12px}
+
+  /* RESULTS */
+  .result-hero{text-align:center;padding:18px 0}
+  .score-big{font-size:56px;font-weight:800;line-height:1}
+  .score-status{font-size:18px;font-weight:700;margin-top:8px}
+  .score-detail{font-size:14px;color:var(--muted);margin-top:10px}
+  .result-card{background:var(--gray);border-radius:var(--r);padding:14px;margin:18px 0}
+  .result-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #ddd;font-size:14px}
+  .result-row:last-child{border-bottom:none}
+  .result-row b{color:var(--dark)}
+  .breakdown h3{font-size:14px;color:var(--dark);margin-bottom:9px}
+  .topic-bar{margin-bottom:9px}
+  .topic-bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+  .topic-bar-track{height:7px;background:#ddd;border-radius:4px;overflow:hidden}
+  .topic-bar-fill{height:100%;border-radius:4px}
+
+  /* REVIEW */
+  .rev-title{font-size:19px;font-weight:700;color:var(--dark);margin-bottom:4px}
+  .rev-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+  .back-bar{position:sticky;top:0;background:#fff;padding:9px 0;margin-bottom:8px;z-index:5}
+  .rev-item{border:1.5px solid #eee;border-radius:var(--r);padding:14px;margin-bottom:12px}
+  .rev-item.ok{border-left:4px solid var(--green)}
+  .rev-item.bad{border-left:4px solid var(--red)}
+  .rev-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+  .rev-num{font-size:13px;font-weight:700;color:var(--dark)}
+  .rev-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .rev-badge.ok{background:var(--gbg);color:var(--green)}
+  .rev-badge.bad{background:var(--rbg);color:var(--red)}
+  .rev-topic{font-size:11px;color:var(--muted);margin-bottom:5px}
+  .rev-q{font-size:14px;font-weight:500;margin-bottom:9px}
+  .rev-opt{font-size:13px;padding:7px 11px;border-radius:8px;margin-bottom:5px;display:flex;gap:7px}
+  .rev-opt .l{font-weight:700;flex-shrink:0}
+  .rev-opt.correct{background:var(--gbg);color:var(--green);font-weight:600}
+  .rev-opt.chosen-wrong{background:var(--rbg);color:var(--red)}
+  .rev-opt.neutral{color:#666}
+  .rev-just{background:#f8f9fa;border-radius:8px;padding:11px;font-size:12.5px;color:#444;margin-top:9px;line-height:1.5}
+  .rev-just b{color:var(--dark)}
+
+  .footer-note{font-size:11px;color:var(--muted);text-align:center;margin-top:14px;padding-bottom:18px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-icon">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 8 L30 52 M8 30 L52 30" stroke="#C0392B" stroke-width="5" stroke-linecap="round"/>
+        <path d="M8 30 C8 30 16 18 24 24 C28 27 29 30 30 30 C31 30 33 22 37 22 C41 22 42 30 44 30 C46 30 52 30 52 30" stroke="#1A3A5C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="hdr-txt">
+      <h1>Hospital Belga — Cardiología</h1>
+      <p>Residencia Medicina Interna · Examen del módulo</p>
+    </div>
+    <button class="qr-btn" id="btnQr" onclick="openQR()">QR ↗</button>
+    <div class="timer" id="timer">20:00</div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+
+  <!-- REGISTRO -->
+  <div class="screen active" id="screen-reg">
+    <div class="reg-title">Examen de Cardiología</div>
+    <div class="reg-sub">Evaluación sumativa del módulo · 20 preguntas de selección múltiple</div>
+    <div class="field">
+      <label>Nombre completo</label>
+      <input type="text" id="inpName" placeholder="Ej. Miroslava Kafka" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Grado académico</label>
+      <div class="grade-opts">
+        <div class="grade-opt" data-grade="R1">R1</div>
+        <div class="grade-opt" data-grade="R2">R2</div>
+        <div class="grade-opt" data-grade="R3">R3</div>
+      </div>
+    </div>
+    <div class="info-box">
+      <b>Instrucciones</b>
+      <ul>
+        <li>20 preguntas, una sola respuesta correcta por ítem.</li>
+        <li>Orden de preguntas y opciones aleatorizado por intento.</li>
+        <li>Puedes navegar entre preguntas y saltar a las faltantes.</li>
+        <li>Al finalizar: nota + revisión fundamentada + PDF firmado.</li>
+      </ul>
+    </div>
+    <div class="warn-box">⏱ <b>Tiempo límite: 20 minutos.</b> El examen se cierra y califica automáticamente al agotarse.</div>
+    <button class="btn btn-primary" id="btnStart" disabled>Iniciar examen</button>
+  </div>
+
+  <!-- EXAMEN -->
+  <div class="screen" id="screen-exam">
+    <div class="q-counter" id="qCounter">Pregunta 1 de 20</div>
+    <div class="q-topic" id="qTopic"></div>
+    <div id="qBody"></div>
+    <div class="nav-btns">
+      <button class="btn btn-outline" id="btnPrev">Anterior</button>
+      <button class="btn btn-primary" id="btnNext">Siguiente</button>
+    </div>
+    <div class="map-link"><button id="btnShowMap">Ver mapa de preguntas</button></div>
+    <div class="answered-note" id="answeredNote"></div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="screen" id="screen-result">
+    <div class="result-hero">
+      <div class="score-big" id="scoreBig">0%</div>
+      <div class="score-status" id="scoreStatus"></div>
+      <div class="score-detail" id="scoreDetail"></div>
+    </div>
+    <div class="result-card">
+      <div class="result-row"><span>Residente</span><b id="rName"></b></div>
+      <div class="result-row"><span>Grado</span><b id="rGrade"></b></div>
+      <div class="result-row"><span>Fecha</span><b id="rDate"></b></div>
+      <div class="result-row"><span>Respuestas correctas</span><b id="rCorrect"></b></div>
+    </div>
+    <div class="breakdown" style="margin-bottom:20px">
+      <h3>Desempeño por tema</h3>
+      <div id="topicBreakdown"></div>
+    </div>
+    <button class="btn btn-amber" id="btnReview">Respuestas — revisión detallada</button>
+    <div class="spacer"></div>
+    <button class="btn btn-dark" id="btnPdf">Descargar PDF para firmar</button>
+    <div class="spacer"></div>
+    <button class="btn btn-outline" id="btnRestart">Nuevo examen</button>
+    <div class="footer-note">Hospital Belga — Jefatura de Residentes y Enseñanza<br>Dr. Luis Rodríguez · Jefe de Enseñanza</div>
+  </div>
+
+  <!-- REVISIÓN -->
+  <div class="screen" id="screen-review">
+    <div class="back-bar"><button class="btn btn-outline btn-sm" id="btnBackResult">← Volver a resultados</button></div>
+    <div class="rev-title">Revisión de respuestas</div>
+    <div class="rev-sub" id="revSub"></div>
+    <div id="reviewList"></div>
+    <button class="btn btn-dark" id="btnPdf2">Descargar PDF para firmar</button>
+    <div class="footer-note">Correcta en verde ✓ · Tu error en rojo ✗</div>
+  </div>
+
+</div>
+
+<!-- MODAL: MAPA -->
+<div class="modal-overlay" id="mapModal">
+  <div class="modal">
+    <h3 id="mapTitle">Mapa de preguntas</h3>
+    <p class="sub" id="mapSub"></p>
+    <div class="nav-legend">
+      <span><span class="dot" style="background:var(--green)"></span>Respondida</span>
+      <span><span class="dot" style="background:var(--red)"></span>Falta</span>
+    </div>
+    <div class="nav-grid" id="navGrid"></div>
+    <button class="btn btn-primary" id="btnJumpFirst" style="display:none">Ir a la primera faltante</button>
+    <div class="spacer"></div>
+    <button class="btn btn-dark" id="btnFinishAnyway">Finalizar examen</button>
+    <div class="spacer"></div>
+    <button class="btn btn-outline" id="btnCloseMap">Seguir respondiendo</button>
+  </div>
+</div>
+
+<!-- MODAL: QR -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal">
+    <h3>Código QR — Compartir examen</h3>
+    <p class="sub">Muéstralo en pantalla o imprímelo. Escanear abre el examen directamente en el móvil.</p>
+    <div class="qr-wrap">
+      <p class="qr-note">Escanea para abrir el examen</p>
+      <div id="qrcode"></div>
+      <p class="qr-url" id="qrUrl"></p>
+    </div>
+    <button class="btn btn-dark" id="btnCloseQR">Cerrar</button>
+  </div>
+</div>
+
+<script>
+// ═══ CONFIG ══════════════════════════════════════════════════════════════════
+const TIME_LIMIT = 20 * 60;   // ← ajustar aquí (segundos)
+const PASS_PCT   = 60;
+
+// ═══ BANCO DE PREGUNTAS (20 MCQ) ════════════════════════════════════════════
+const QUESTIONS = [
+  {
+    topic:"ECG",
+    vignette:"Residente de guardia recibe un ECG de un paciente de 65 años con palpitaciones. El eje eléctrico es de +120°.",
+    text:"¿Cómo se clasifica este eje eléctrico y cuál es su implicación clínica más frecuente?",
+    opts:["Eje normal; sin implicación clínica","Eje derecho; puede indicar hipertrofia ventricular derecha, TEP o bloqueo de rama derecha","Eje izquierdo; sugiere hipertrofia ventricular izquierda o hemibloqueo anterior","Eje indeterminado; no tiene significado clínico"],
+    correct:1,
+    just:"El eje eléctrico normal está entre -30° y +90°. Un eje entre +90° y +180° es eje derecho y orienta a hipertrofia ventricular derecha, TEP, bloqueo de rama derecha o cor pulmonale. Es un dato de orientación; siempre se integra con el cuadro clínico."
+  },
+  {
+    topic:"SCA sin ST",
+    vignette:"Varón de 58 años, diabético, llega con dolor epigástrico de 2 horas, diaforesis. ECG sin cambios. Primera troponina ultrasensible negativa a las 2h del inicio del dolor.",
+    text:"¿Cuál es la conducta correcta respecto al diagnóstico de SCA?",
+    opts:["Troponina negativa descarta IAM; alta hospitalaria segura","Repetir troponina a las 3-6h del inicio del dolor y no del tiempo de ingreso; aún dentro de la ventana de negatividad","Iniciar anticoagulación empírica aunque la troponina sea negativa en diabéticos","Solicitar ecocardiograma urgente antes de nueva troponina"],
+    correct:1,
+    just:"La troponina ultrasensible puede ser negativa hasta 3-6h del inicio del dolor (no del ingreso hospitalario). El síntoma guía es el tiempo desde el inicio del evento isquémico. En el diabético, el dolor atípico (epigástrico, ausente) hace que la repetición de troponina y el seguimiento ECG sean obligatorios antes del alta."
+  },
+  {
+    topic:"SCA sin ST",
+    vignette:"Mujer de 72 años con SCASEST confirmado (troponina elevada, cambios ST-T). Score GRACE calculado en 165 puntos.",
+    text:"¿Qué estrategia de manejo indica este score?",
+    opts:["Manejo conservador; la estrategia invasiva solo si falla el tratamiento médico","Coronariografía electiva en las próximas 2-4 semanas","Estrategia invasiva precoz (coronariografía en <24h); score GRACE >140 indica alto riesgo","Alta con doble antiagregación; el score no modifica el manejo"],
+    correct:2,
+    just:"El score GRACE >140 identifica pacientes de alto riesgo en SCASEST que se benefician de estrategia invasiva precoz (coronariografía en <24h). En pacientes de muy alto riesgo (inestabilidad hemodinámica, arritmia maligna) la coronariografía es inmediata (<2h). La estrategia conservadora se reserva para GRACE <109."
+  },
+  {
+    topic:"SCA con ST",
+    vignette:"ECG de un paciente con dolor torácico agudo: supradesnivel de ST en aVR + depresión difusa del ST en múltiples derivaciones.",
+    text:"¿Cuál es el diagnóstico más probable y la implicación terapéutica?",
+    opts:["SCACEST clásico; activar código infarto y reperfundir la arteria culpable","Oclusión del tronco de la coronaria izquierda o DA proximal; requiere coronariografía urgente, no fibrinólisis","Pericarditis aguda; iniciar AINES y colchicina","Patrón normal de repolarización temprana; sin tratamiento urgente"],
+    correct:1,
+    just:"El supradesnivel de ST en aVR con depresión difusa es el patrón de oclusión del tronco de la coronaria izquierda o de la arteria descendente anterior proximal (SCASEST equivalente o SCACEST de alto riesgo). En este contexto la fibrinólisis NO está indicada; el paciente requiere coronariografía urgente. No se debe confundir con un SCACEST clásico tributario de lítico."
+  },
+  {
+    topic:"SCA con ST",
+    vignette:"Varón de 50 años con SCACEST de 90 minutos de evolución en hospital sin capacidad de ICP. El tiempo estimado de traslado a centro con ICP es de 3 horas.",
+    text:"¿Cuál es la estrategia de reperfusión correcta?",
+    opts:["Trasladar al paciente sin reperfusión; esperar la ICP aunque sean 3h extra","Administrar fibrinólisis ahora y trasladar para coronariografía en 3-24h (estrategia fármaco-invasiva)","Esperar 24h y valorar; el riesgo del traslado supera al beneficio de la reperfusión","Solo aspirina y nitratos; la reperfusión no cambia el pronóstico si el dolor cedió"],
+    correct:1,
+    just:"Cuando el tiempo primer contacto médico-balón supera las 2 horas, la fibrinólisis precoz seguida de coronariografía en 3-24h (estrategia fármaco-invasiva) es la conducta indicada en SCACEST. La fibrinólisis debe administrarse dentro de los primeros 30 minutos de contacto médico. Nunca se traslada sin reperfusión en la ventana de beneficio."
+  },
+  {
+    topic:"IC aguda",
+    vignette:"Varón de 68 años con IC descompensada. PA 160/100 mmHg, FC 110, saturación 88% con O2 de alto flujo, estertores hasta los campos superiores. Clasificación Killip III.",
+    text:"¿Cuál es el primer fármaco IV de elección?",
+    opts:["Morfina 4mg IV para reducir la precarga y la ansiedad","Furosemida 40-80mg IV + nitroglicerina IV por la PA elevada","Metoprolol IV para control de la frecuencia cardíaca","Dobutamina IV por la dificultad respiratoria"],
+    correct:1,
+    just:"En IC aguda hipertensiva con edema agudo de pulmón, el esquema de primera línea es diurético IV (furosemida) más vasodilatador IV (nitroglicerina si PA >110). La morfina ha caído en desuso en EAP por aumento del riesgo de intubación y muerte en registros actuales. La dobutamina no está indicada con PA elevada (patrón húmedo-caliente, no bajo-gasto)."
+  },
+  {
+    topic:"IC aguda",
+    vignette:"Debate en sala: ante un paciente con edema agudo de pulmón, el médico residente propone morfina 2mg IV para reducir la ansiedad y la precarga.",
+    text:"¿Cuál es la posición correcta basada en evidencia actual?",
+    opts:["Correcta; morfina es el tratamiento estándar del EAP en todas las guías","La morfina reduce la precarga de forma eficaz y su uso está respaldado por ensayos aleatorizados modernos","Incorrecta; el registro ADHERE y datos posteriores asocian morfina en EAP con mayor necesidad de ventilación mecánica y mayor mortalidad; su uso no está recomendado","Correcta solo si la PA sistólica es mayor de 180 mmHg"],
+    correct:2,
+    just:"El registro ADHERE (>100.000 pacientes) mostró que la morfina en EAP se asoció a mayor uso de VMI, más ingresos en UCI y mayor mortalidad hospitalaria. Las guías ESC 2021 de IC aguda no recomiendan morfina de forma rutinaria. En el contexto del sistema de exposición rotatoria, este es exactamente el tipo de evidencia que el expositor debe llevar a la sesión, no la tradición."
+  },
+  {
+    topic:"IC crónica",
+    vignette:"Paciente con IC con FEVIr (FEVI 30%), en tratamiento con enalapril 10mg/12h y carvedilol 25mg/12h. NYHA II. Sin hospitalización reciente.",
+    text:"¿Qué fármaco añadirías para reducir adicionalmente la mortalidad?",
+    opts:["Digoxina; reduce los síntomas y la mortalidad en IC con FEVIr","Espironolactona o eplerenona (ARM); el tercer pilar reduce mortalidad en FEVIr con FEVI <35%","Ivabradina; es el fármaco con mayor beneficio en mortalidad en IC","Amiodarona profiláctica; la FEVIr predispone a arritmias malignas"],
+    correct:1,
+    just:"Los 4 pilares con mortalidad en IC-FEVIr son: IECA/ARA2 (o sacubitril-valsartán), betabloqueante, ARM (espironolactona/eplerenona) y SGLT2i. Este paciente tiene IECA + BB y falta el ARM. La digoxina no reduce mortalidad. La ivabradina reduce hospitalizaciones pero no mortalidad de forma primaria. La amiodarona profiláctica no está indicada."
+  },
+  {
+    topic:"IC crónica",
+    vignette:"Paciente de 74 años con IC con FEVIp (FEVI 58%), hipertensiva y diabética tipo 2. NYHA III.",
+    text:"¿Cuál de los siguientes fármacos ha demostrado reducir las hospitalizaciones por IC en este perfil de paciente?",
+    opts:["Sacubitril-valsartán; demostró beneficio equiparable en FEVIp y FEVIr","Empagliflozina o dapagliflozina (SGLT2i); ensayos EMPEROR-Preserved y DELIVER demostraron reducción de hospitalizaciones en IC-FEVIp","Espironolactona; es el pilar con mayor evidencia en IC-FEVIp","Carvedilol; reduce la FC y mejora la FEVI en la IC-FEVIp"],
+    correct:1,
+    just:"Los SGLT2i (empagliflozina, dapagliflozina) son actualmente los únicos fármacos con evidencia de reducción de hospitalizaciones y muerte cardiovascular en IC-FEVIp (ensayos EMPEROR-Preserved y DELIVER, 2021-2022). El sacubitril-valsartán mostró beneficio en el límite en el ensayo PARAGON-HF. La espironolactona tiene evidencia modesta. Los betabloqueantes no tienen evidencia de beneficio en FEVIp pura."
+  },
+  {
+    topic:"FA",
+    vignette:"Paciente de 65 años con FA de inicio incierto (no se puede fechar con certeza). PA 135/85, FC 120 lpm, sin signos de inestabilidad hemodinámica.",
+    text:"¿Cuál es la conducta más apropiada respecto a la estrategia de ritmo vs frecuencia?",
+    opts:["Cardioversión eléctrica inmediata; la frecuencia alta es la prioridad","Control de frecuencia como estrategia inicial; la cardioversión requiere anticoagulación mínima de 3 semanas o ETE para descartar trombo en orejuela izquierda","Iniciar amiodarona IV para cardioversión farmacológica sin anticoagulación previa","Cardioversión sin anticoagulación si el paciente lleva menos de 48h con síntomas"],
+    correct:1,
+    just:"En FA de inicio incierto o >48h, la cardioversión (eléctrica o farmacológica) solo es segura tras 3 semanas de anticoagulación terapéutica O tras ETE que descarte trombo en orejuela izquierda. El riesgo de embolismo post-cardioversión en FA no anticoagulada es de hasta 5-7%. Control de frecuencia con betabloqueante o calcioantagonista no dihidropiridínico es la estrategia inicial."
+  },
+  {
+    topic:"FA",
+    vignette:"Mujer de 70 años con FA paroxística. Sin IC, HTA controlada, sin DM, sin ACV previo, sin enfermedad vascular. CHA₂DS₂-VASc: 2 (por edad y sexo femenino).",
+    text:"¿Cuál es la recomendación de anticoagulación?",
+    opts:["No anticoagular; el score es bajo y el riesgo de sangrado supera al trombótico","Anticoagular; score ≥2 en mujer (o ≥1 en hombre excluyendo el punto de sexo) indica beneficio claro de anticoagulación","Aspirina; alternativa válida a los anticoagulantes en score bajo","Solo anticoagular si la FA es permanente"],
+    correct:1,
+    just:"Las guías ESC 2020 indican anticoagulación con NOAC cuando el CHA₂DS₂-VASc es ≥1 en hombres o ≥2 en mujeres (el punto de sexo femenino es modulador, no independiente). Este caso tiene edad ≥65 (1 punto) + sexo femenino (1 punto) = 2 puntos, que indica anticoagulación. La aspirina no es alternativa válida: tiene riesgo de sangrado similar y menor eficacia antitrombótica."
+  },
+  {
+    topic:"FA",
+    vignette:"Varón de 68 años con FA no valvular y antecedente de úlcera péptica resuelta. Función renal normal. Requiere anticoagulación.",
+    text:"¿Cuál es la ventaja principal de los NOACs sobre la warfarina en este contexto?",
+    opts:["Menor costo económico en el sistema boliviano","Mejor eficacia y menor riesgo de hemorragia intracraneal; no requieren monitorización de INR","Mejor absorción oral y mayor biodisponibilidad en pacientes con gastropatía","Son los únicos anticoagulantes eficaces en FA no valvular"],
+    correct:1,
+    just:"Los NOACs (apixabán, rivaroxabán, dabigatrán, edoxabán) demostraron en los ensayos pivotales no inferioridad o superioridad versus warfarina, con reducción de un 50% en hemorragia intracraneal. No requieren monitorización de INR. En FA no valvular son de elección sobre warfarina si están disponibles. La warfarina sigue siendo la opción en FA con válvula mecánica o estenosis mitral reumática."
+  },
+  {
+    topic:"TEP",
+    vignette:"Mujer de 45 años, postoperatorio de cirugía ortopédica mayor, con disnea aguda, taquicardia y dolor pleurítico. Score de Wells: 7 puntos (probabilidad alta). Dímero D: negativo.",
+    text:"¿Cuál es la conducta diagnóstica correcta?",
+    opts:["Dímero D negativo descarta TEP; no requiere más estudios","Con probabilidad clínica alta, el dímero D no tiene valor para descartar TEP; proceder con angioTC pulmonar","Repetir el dímero D en 24h antes de decidir","Iniciar anticoagulación empírica y suspender si el dímero D sigue negativo en 48h"],
+    correct:1,
+    just:"El dímero D solo tiene valor para descartar TEP en probabilidad clínica BAJA o intermedia. Con probabilidad alta (Wells ≥5-6), un dímero D negativo NO descarta el diagnóstico y la angioTC pulmonar es obligatoria. Usar el dímero D para descartar con alta probabilidad clínica pretest es una de las trampas más frecuentes en el manejo del TEP."
+  },
+  {
+    topic:"TEP",
+    vignette:"Varón de 55 años con TEP confirmado por angioTC. PA 80/50 mmHg, FC 125, saturación 84% pese a O2 de alto flujo. Ecocardiograma de urgencia: disfunción ventricular derecha marcada.",
+    text:"¿Cuál es la conducta de reperfusión en este caso?",
+    opts:["Anticoagulación con heparina no fraccionada IV; esperar la respuesta antes de escalar","Trombolisis sistémica con alteplase; TEP masivo con inestabilidad hemodinámica y sin contraindicación absoluta","Filtro de vena cava inferior; primera medida en TEP con shock","Anticoagulación oral inmediata con rivaroxabán; el shock es reversible con soporte"],
+    correct:1,
+    just:"El TEP masivo (con shock u obstrucción circulatoria) es la indicación principal de trombolisis sistémica (alteplase 100mg en 2h). La heparina sola es insuficiente en este contexto. El filtro de VCI no es tratamiento del TEP agudo. El rivaroxabán oral no tiene indicación en TEP hemodinámicamente inestable. La trombolisis reduce la mortalidad de ~30% a ~5% en TEP masivo."
+  },
+  {
+    topic:"Bradiarritmias",
+    vignette:"Hombre de 70 años, asintomático, ECG de rutina: BAV de segundo grado tipo Mobitz II (ondas P bloqueadas sin alargamiento previo del PR).",
+    text:"¿Cuál es la conducta correcta?",
+    opts:["Observación; el Mobitz II asintomático no requiere intervención","Marcapasos definitivo; el Mobitz II tiene alto riesgo de progresión a BAV completo y muerte súbita, independientemente de los síntomas","Atropina 0.5mg IV y observación en urgencias 24h","Holter de 24h y decisión según la frecuencia de los bloqueos"],
+    correct:1,
+    just:"El BAV de 2° grado tipo Mobitz II es una indicación de clase I para implante de marcapasos definitivo INDEPENDIENTEMENTE de la presencia de síntomas (guías ACC/AHA/ESC). A diferencia del Mobitz I (que puede ser benigno y vagal), el Mobitz II indica enfermedad infranodal del His-Purkinje con alta probabilidad de progresión a BAV completo y riesgo de síncope o muerte súbita."
+  },
+  {
+    topic:"Crisis hipertensiva",
+    vignette:"Mujer de 55 años en urgencias con PA 210/120 mmHg, cefalea occipital y PA igual en ambos brazos. Sin déficit neurológico, sin papiedema, función renal basal normal.",
+    text:"¿Cómo clasifica este cuadro y cuál es la meta de reducción de PA?",
+    opts:["Emergencia hipertensiva; reducir PA >25% en la primera hora con fármaco IV","Urgencia hipertensiva; reducir PA gradualmente en 24-48h con fármaco oral, meta <160/100 en las primeras horas","Emergencia hipertensiva; reducir la PA a valores normales (<120/80) en las primeras 2 horas","Urgencia hipertensiva; iniciar antihipertensivo oral y alta domiciliaria inmediata"],
+    correct:1,
+    just:"Sin daño agudo de órgano diana (sin encefalopatía, sin disección, sin EAP, sin eclampsia, sin SCA), esta es una URGENCIA hipertensiva, no emergencia. La reducción debe ser gradual: meta de no más del 25% en las primeras horas, usando vía oral, y completar el descenso en 24-48h. Bajar agresivamente la PA en urgencia hipertensiva puede causar isquemia cerebral."
+  },
+  {
+    topic:"Crisis hipertensiva",
+    vignette:"Varón de 62 años con dolor torácico desgarrante irradiado a la espalda, PA 190/110 mmHg en brazo derecho y 170/100 en brazo izquierdo. TC de urgencia confirma disección aórtica tipo B.",
+    text:"¿Cuál es el fármaco antihipertensivo de primera elección?",
+    opts:["Nifedipino sublingual; acción rápida y fácil administración","Labetalol IV o esmolol IV; reducir la frecuencia cardíaca y la PA simultáneamente para disminuir el estrés de cizalla aórtico","Nitroprusiato IV en monoterapia; el vasodilatador más potente disponible","Furosemida IV; reducir la precarga disminuye la presión aórtica"],
+    correct:1,
+    just:"En la disección aórtica el objetivo es reducir tanto la PA (meta sistólica 100-120mmHg) como la frecuencia cardíaca (meta FC <60 lpm) para disminuir el dP/dt y el estrés de cizalla sobre la pared aórtica. El betabloqueante IV (labetalol o esmolol) cumple ambos objetivos. El nitroprusiato puede usarse como adjunto si persiste PA elevada, pero SIEMPRE tras betabloqueo previo para evitar taquicardia refleja. El nifedipino sublingual está contraindicado."
+  },
+  {
+    topic:"Valvulopatías",
+    vignette:"Mujer de 72 años con estenosis aórtica severa asintomática (área valvular 0.8 cm², gradiente medio 48 mmHg, FEVI 60%).",
+    text:"¿Cuándo está indicada la intervención valvular (TAVI o cirugía)?",
+    opts:["Inmediatamente; toda EA severa requiere intervención independientemente de los síntomas","Solo cuando aparezcan síntomas clásicos (angina, síncope, disnea) o la FEVI caiga <50%","Solo si el gradiente medio supera los 60 mmHg","Cuando el paciente llegue a NYHA IV; intervenir antes aumenta el riesgo quirúrgico"],
+    correct:1,
+    just:"En la EA severa asintomática, las guías ESC/ACC indican intervención cuando: aparecen síntomas (angina, síncope, disnea de esfuerzo), la FEVI cae <50%, o hay caída de PA en prueba de esfuerzo. En la EA asintomática con FEVI conservada, el seguimiento estrecho es la conducta. La tríada sintomática clásica (angina, síncope, IC) marca el punto de inflexión de la curva de supervivencia."
+  },
+  {
+    topic:"Pericarditis",
+    vignette:"Hombre de 32 años con dolor torácico pleurítico, fiebre 38.5°C, frotis pericárdico, ECG con supradesnivel difuso en silla de montar. PCR 85 mg/L. Sin antecedentes relevantes.",
+    text:"¿Cuál de los criterios de Imazio obliga a hospitalizar a este paciente?",
+    opts:["Frotis pericárdico; es un hallazgo de alto riesgo que siempre requiere ingreso","Fiebre >38°C más inicio subagudo más PCR elevada; son criterios de Imazio para hospitalización en pericarditis aguda","El dolor pleurítico es criterio de hospitalización obligatoria","El supradesnivel difuso en el ECG es suficiente para hospitalizar sin considerar otros criterios"],
+    correct:1,
+    just:"Los criterios de Imazio para hospitalización en pericarditis aguda incluyen: fiebre >38°C, inicio subagudo, derrame pericárdico significativo, no respuesta a AINES en 1 semana, miopericarditis, inmunosupresión, trauma o anticoagulación. Este paciente tiene fiebre >38°C y PCR elevada, dos criterios de riesgo. El frotis pericárdico sin otros criterios no obliga al ingreso."
+  },
+  {
+    topic:"Síncope",
+    vignette:"Mujer de 68 años que llega a urgencias por síncope presenciado. No hubo pródromos. Al recuperar la conciencia: PA 90/60 mmHg, FC 35 lpm, ECG con BAV completo.",
+    text:"¿Cuál de los siguientes ROSE criteria está presente y qué conducta indica?",
+    opts:["Ningún criterio de ROSE; el síncope vasovagal no requiere hospitalización","Bradicardia <50 lpm en el ECG de urgencias, que es un criterio ROSE de alto riesgo; hospitalización y marcapasos urgente","PA sistólica <90 es criterio de riesgo moderado; observación 6h","El BAV completo no está incluido en los criterios ROSE; solo importa la anamnesis"],
+    correct:1,
+    just:"Los ROSE criteria (Risk stratification Of Syncope in the Emergency department) incluyen: bradicardia <50 lpm, hematocrito <30%, hemoglobina <9 g/dL, ECG con hallazgo isquémico o arritmia, historia de IC congestiva, y PA sistólica <90. Este caso tiene bradicardia <50 (FC 35) y BAV completo, que son indicaciones de hospitalización urgente y estudio de marcapasos. El síncope por BAV completo tiene riesgo de muerte súbita sin tratamiento."
+  }
+];
+
+// ═══ SHUFFLE ════════════════════════════════════════════════════════════════
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function buildExam(){
+  return shuffle(QUESTIONS).map(q=>{
+    const correctText=q.opts[q.correct];
+    const shuffled=shuffle(q.opts);
+    return {...q,opts:shuffled,correct:shuffled.indexOf(correctText)};
+  });
+}
+
+// ═══ STATE ══════════════════════════════════════════════════════════════════
+let state={name:"",grade:"",current:0,items:[],answers:[],timerId:null,timeLeft:TIME_LIMIT};
+const $=id=>document.getElementById(id);
+const screens={reg:$('screen-reg'),exam:$('screen-exam'),result:$('screen-result'),review:$('screen-review')};
+function showScreen(name){Object.values(screens).forEach(s=>s.classList.remove('active'));screens[name].classList.add('active');window.scrollTo(0,0);}
+
+// ═══ REGISTER ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.grade-opt').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.grade-opt').forEach(o=>o.classList.remove('sel'));
+    el.classList.add('sel');state.grade=el.dataset.grade;validateReg();
+  });
+});
+$('inpName').addEventListener('input',e=>{state.name=e.target.value.trim();validateReg();});
+function validateReg(){$('btnStart').disabled=!(state.name.length>=3&&state.grade);}
+$('btnStart').addEventListener('click',()=>{
+  state.items=buildExam();
+  state.answers=new Array(state.items.length).fill(null);
+  state.current=0;state.timeLeft=TIME_LIMIT;
+  startTimer();renderQuestion();showScreen('exam');
+});
+
+// ═══ TIMER ══════════════════════════════════════════════════════════════════
+function startTimer(){
+  $('timer').classList.add('show');updateTimerDisplay();
+  state.timerId=setInterval(()=>{
+    state.timeLeft--;updateTimerDisplay();
+    if(state.timeLeft<=60)$('timer').classList.add('warn');
+    if(state.timeLeft<=0){stopTimer();finishExam(true);}
+  },1000);
+}
+function stopTimer(){if(state.timerId){clearInterval(state.timerId);state.timerId=null;}$('timer').classList.remove('warn');}
+function updateTimerDisplay(){
+  const m=Math.floor(state.timeLeft/60),s=state.timeLeft%60;
+  $('timer').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ═══ QUESTION ═══════════════════════════════════════════════════════════════
+function renderQuestion(){
+  const q=state.items[state.current],n=state.current;
+  $('qCounter').textContent=`Pregunta ${n+1} de ${state.items.length}`;
+  $('qTopic').textContent=q.topic;
+  $('progressBar').style.width=(n/state.items.length*100)+'%';
+  $('qBody').innerHTML=
+    (q.vignette?`<div class="q-vignette">${q.vignette}</div>`:'')+
+    `<div class="q-text">${q.text}</div>`+
+    `<div class="opts">${q.opts.map((opt,i)=>{
+      const sel=state.answers[n]===i?'sel':'';
+      return `<div class="opt ${sel}" data-i="${i}"><span class="opt-letter">${String.fromCharCode(65+i)}</span><span>${opt}</span></div>`;
+    }).join('')}</div>`;
+  document.querySelectorAll('#qBody .opt').forEach(el=>{
+    el.addEventListener('click',()=>{
+      state.answers[n]=parseInt(el.dataset.i);
+      document.querySelectorAll('#qBody .opt').forEach(o=>o.classList.remove('sel'));
+      el.classList.add('sel');updateNav();
+    });
+  });
+  $('btnPrev').style.visibility=n===0?'hidden':'visible';
+  updateNav();
+  const ans=state.answers.filter(a=>a!==null).length;
+  $('answeredNote').textContent=`Respondidas: ${ans} de ${state.items.length}`;
+}
+function updateNav(){$('btnNext').textContent=state.current===state.items.length-1?'Finalizar':'Siguiente';}
+
+$('btnNext').addEventListener('click',()=>{
+  if(state.current<state.items.length-1){state.current++;renderQuestion();}
+  else{
+    const pending=state.answers.map((a,i)=>a===null?i:null).filter(x=>x!==null);
+    if(pending.length>0)openMap(true);else finishExam(false);
+  }
+});
+$('btnPrev').addEventListener('click',()=>{if(state.current>0){state.current--;renderQuestion();}});
+
+// ═══ MAP ════════════════════════════════════════════════════════════════════
+$('btnShowMap').addEventListener('click',()=>openMap(false));
+function openMap(fromFinish){
+  const pending=state.answers.map((a,i)=>a===null?i:null).filter(x=>x!==null);
+  $('mapTitle').textContent=fromFinish?'Faltan preguntas por responder':'Mapa de preguntas';
+  $('mapSub').textContent=pending.length>0?`${pending.length} pregunta(s) sin responder. Toca para ir.`:'Todas respondidas.';
+  const grid=$('navGrid');
+  grid.innerHTML=state.items.map((q,i)=>{
+    const cls=state.answers[i]!==null?'answered':'pending';
+    const cur=i===state.current?'current':'';
+    return `<div class="nav-cell ${cls} ${cur}" data-i="${i}">${i+1}</div>`;
+  }).join('');
+  grid.querySelectorAll('.nav-cell').forEach(c=>{
+    c.addEventListener('click',()=>{state.current=parseInt(c.dataset.i);closeMap();renderQuestion();});
+  });
+  const jb=$('btnJumpFirst');
+  if(pending.length>0){jb.style.display='block';jb.onclick=()=>{state.current=pending[0];closeMap();renderQuestion();};}
+  else jb.style.display='none';
+  $('mapModal').classList.add('show');
+}
+function closeMap(){$('mapModal').classList.remove('show');}
+$('btnCloseMap').addEventListener('click',closeMap);
+$('btnFinishAnyway').addEventListener('click',()=>{closeMap();finishExam(false);});
+
+// ═══ FINISH ═════════════════════════════════════════════════════════════════
+function finishExam(byTimeout){
+  stopTimer();
+  let correct=0;
+  state.items.forEach((q,i)=>{if(state.answers[i]===q.correct)correct++;});
+  const pct=Math.round(correct/state.items.length*100),passed=pct>=PASS_PCT;
+  $('progressBar').style.width='100%';
+  $('scoreBig').textContent=pct+'%';$('scoreBig').style.color=passed?'var(--green)':'var(--red)';
+  $('scoreStatus').textContent=passed?'✓ APROBADO':'✗ REPROBADO';$('scoreStatus').style.color=passed?'var(--green)':'var(--red)';
+  $('scoreDetail').textContent=(byTimeout?'⏱ Tiempo agotado · ':'')+`${correct} de ${state.items.length} correctas`;
+  $('rName').textContent=state.name;$('rGrade').textContent=state.grade;
+  $('rDate').textContent=new Date().toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric'});
+  $('rCorrect').textContent=`${correct}/${state.items.length}`;
+  const topics={};
+  state.items.forEach((q,i)=>{
+    if(!topics[q.topic])topics[q.topic]={c:0,t:0};
+    topics[q.topic].t++;
+    if(state.answers[i]===q.correct)topics[q.topic].c++;
+  });
+  $('topicBreakdown').innerHTML=Object.entries(topics).map(([t,d])=>{
+    const p=Math.round(d.c/d.t*100),col=p>=60?'var(--green)':'var(--red)';
+    return `<div class="topic-bar"><div class="topic-bar-label"><span>${t}</span><span>${d.c}/${d.t}</span></div><div class="topic-bar-track"><div class="topic-bar-fill" style="width:${p}%;background:${col}"></div></div></div>`;
+  }).join('');
+  state.result={correct,pct,passed,byTimeout};
+  showScreen('result');
+}
+
+// ═══ REVIEW ═════════════════════════════════════════════════════════════════
+$('btnReview').addEventListener('click',renderReview);
+$('btnBackResult').addEventListener('click',()=>showScreen('result'));
+function renderReview(){
+  $('revSub').textContent=`${state.name} · ${state.grade} · ${state.result.correct}/${state.items.length} correctas`;
+  $('reviewList').innerHTML=state.items.map((q,i)=>{
+    const ans=state.answers[i],ok=ans===q.correct;
+    const optsHtml=q.opts.map((opt,j)=>{
+      let cls='neutral';
+      if(j===q.correct)cls='correct';
+      else if(j===ans)cls='chosen-wrong';
+      const mark=j===q.correct?' ✓':j===ans?' ✗':'';
+      return `<div class="rev-opt ${cls}"><span class="l">${String.fromCharCode(65+j)}</span><span>${opt}${mark}</span></div>`;
+    }).join('');
+    const ansTxt=ans===null?'Sin responder':String.fromCharCode(65+ans);
+    return `<div class="rev-item ${ok?'ok':'bad'}">
+      <div class="rev-head"><span class="rev-num">Pregunta ${i+1}</span><span class="rev-badge ${ok?'ok':'bad'}">${ok?'CORRECTA':'INCORRECTA'}</span></div>
+      <div class="rev-topic">${q.topic}</div>
+      ${q.vignette?`<div class="q-vignette" style="font-size:13px;margin-bottom:10px">${q.vignette}</div>`:''}
+      <div class="rev-q">${q.text}</div>
+      ${optsHtml}
+      <div class="rev-opt neutral" style="padding:4px 11px;font-size:12px">Tu respuesta: <b>${ansTxt}</b></div>
+      <div class="rev-just"><b>Fundamento:</b> ${q.just}</div>
+    </div>`;
+  }).join('');
+  showScreen('review');
+}
+
+// ═══ RESTART ════════════════════════════════════════════════════════════════
+$('btnRestart').addEventListener('click',()=>{
+  stopTimer();
+  state={name:"",grade:"",current:0,items:[],answers:[],timerId:null,timeLeft:TIME_LIMIT};
+  $('inpName').value='';document.querySelectorAll('.grade-opt').forEach(o=>o.classList.remove('sel'));
+  $('btnStart').disabled=true;$('progressBar').style.width='0%';
+  $('timer').classList.remove('show','warn');$('timer').textContent='20:00';
+  showScreen('reg');
+});
+
+// ═══ QR ═════════════════════════════════════════════════════════════════════
+let qrGenerated=false;
+function openQR(){
+  if(!qrGenerated){
+    const url=window.location.href.split('?')[0].split('#')[0];
+    $('qrUrl').textContent=url;
+    new QRCode($('qrcode'),{text:url,width:220,height:220,colorDark:"#1A3A5C",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+    qrGenerated=true;
+  }
+  $('qrModal').classList.add('show');
+}
+$('btnCloseQR').addEventListener('click',()=>$('qrModal').classList.remove('show'));
+
+// ═══ PDF ════════════════════════════════════════════════════════════════════
+$('btnPdf').addEventListener('click',generatePDF);
+$('btnPdf2').addEventListener('click',generatePDF);
+function generatePDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const W=doc.internal.pageSize.getWidth(),M=50;let y=M;
+  const DARK=[26,58,92],BLUE=[36,113,163],GREEN=[30,132,73],RED=[192,57,43],GRAY=[120,120,120];
+
+  // Header
+  doc.setFillColor(...DARK);doc.rect(0,0,W,70,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(15);
+  doc.text('EXAMEN DE CARDIOLOGÍA',M,32);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);
+  doc.text('Hospital Belga — Residencia de Medicina Interna · Módulo Cardiología',M,50);
+  doc.setFontSize(9);doc.text('Jefatura de Residentes y Enseñanza · Dr. Luis Rodríguez',M,63);
+  y=95;
+
+  // Datos
+  doc.setTextColor(...DARK);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('Datos del evaluado',M,y);y+=8;
+  doc.setDrawColor(...BLUE);doc.setLineWidth(1);doc.line(M,y,W-M,y);y+=18;
+  const r=state.result;
+  const info=[['Residente:',state.name],['Grado académico:',state.grade],['Módulo:','Cardiología — Evaluación sumativa'],['Fecha:',new Date().toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'})+(r.byTimeout?' · Tiempo agotado':'')],['Preguntas:','20 MCQ aleatorizadas']];
+  info.forEach(([k,v])=>{doc.setFont('helvetica','bold');doc.setTextColor(...DARK);doc.text(k,M,y);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);doc.text(String(v),M+120,y);y+=17;});
+  y+=10;
+
+  // Score box
+  const passed=r.passed,sc=passed?GREEN:RED;
+  doc.setFillColor(passed?232:255,passed?245:235,passed?233:238);
+  doc.roundedRect(M,y,W-2*M,70,8,8,'F');
+  doc.setTextColor(...sc);doc.setFont('helvetica','bold');doc.setFontSize(34);
+  doc.text(r.pct+'%',W/2,y+38,{align:'center'});
+  doc.setFontSize(13);doc.text(passed?'APROBADO':'REPROBADO',W/2,y+58,{align:'center'});
+  y+=90;
+  doc.setTextColor(...GRAY);doc.setFont('helvetica','normal');doc.setFontSize(10);
+  doc.text(`${r.correct} de ${state.items.length} respuestas correctas · Nota aprobatoria: ${PASS_PCT}%`,W/2,y,{align:'center'});y+=25;
+
+  // Tabla resumen
+  doc.setTextColor(...DARK);doc.setFont('helvetica','bold');doc.setFontSize(11);
+  doc.text('Resumen por pregunta',M,y);y+=6;
+  doc.setDrawColor(...BLUE);doc.line(M,y,W-M,y);y+=14;
+  const cols=[M,M+30,M+75,M+250,M+360];
+  doc.setFillColor(...DARK);doc.rect(M,y-10,W-2*M,18,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+  doc.text('#',cols[0]+3,y+2);doc.text('Tipo',cols[1]+3,y+2);doc.text('Tema',cols[2]+3,y+2);
+  doc.text('Respuesta',cols[3]+3,y+2);doc.text('Correcta',cols[4]+3,y+2);y+=16;
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
+  state.items.forEach((q,i)=>{
+    if(y>720){doc.addPage();y=M;}
+    const ai=state.answers[i],aL=ai===null?'—':String.fromCharCode(65+ai),cL=String.fromCharCode(65+q.correct),ok=ai===q.correct;
+    if(i%2===0){doc.setFillColor(235,245,255);doc.rect(M,y-9,W-2*M,16,'F');}
+    doc.setTextColor(60,60,60);doc.text(String(i+1),cols[0]+3,y+2);doc.text('MCQ',cols[1]+3,y+2);
+    doc.text(q.topic.substring(0,22),cols[2]+3,y+2);
+    doc.setTextColor(...(ok?GREEN:RED));doc.text(aL+(ok?' ✓':' ✗'),cols[3]+3,y+2);
+    doc.setTextColor(...GREEN);doc.text(cL,cols[4]+3,y+2);y+=16;
+  });
+
+  // Revisión fundamentada
+  doc.addPage();y=M;
+  doc.setTextColor(...DARK);doc.setFont('helvetica','bold');doc.setFontSize(13);
+  doc.text('Revisión de respuestas fundamentadas',M,y);y+=8;
+  doc.setDrawColor(...BLUE);doc.line(M,y,W-M,y);y+=18;
+  state.items.forEach((q,i)=>{
+    const ai=state.answers[i],ok=ai===q.correct;
+    const qLines=doc.splitTextToSize(q.text,W-2*M);
+    const corrL=doc.splitTextToSize(`Correcta: ${String.fromCharCode(65+q.correct)}) ${q.opts[q.correct]}`,W-2*M);
+    const justL=doc.splitTextToSize('Fundamento: '+q.just,W-2*M);
+    const needed=14+qLines.length*11+corrL.length*11+14+justL.length*10+22;
+    if(y+needed>760){doc.addPage();y=M;}
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...(ok?GREEN:RED));
+    doc.text(`Pregunta ${i+1} (${q.topic}) — ${ok?'CORRECTA':'INCORRECTA'}`,M,y);y+=13;
+    doc.setTextColor(50,50,50);doc.setFont('helvetica','normal');doc.setFontSize(9);
+    qLines.forEach(l=>{doc.text(l,M,y);y+=11;});
+    doc.setFont('helvetica','bold');doc.setTextColor(...GREEN);
+    corrL.forEach(l=>{doc.text(l,M,y);y+=11;});
+    doc.setTextColor(...(ok?GREEN:RED));doc.setFont('helvetica','normal');
+    doc.text(`Tu respuesta: ${ai===null?'Sin responder':String.fromCharCode(65+ai)}`,M,y);y+=12;
+    doc.setTextColor(70,70,70);doc.setFontSize(8.5);
+    justL.forEach(l=>{doc.text(l,M,y);y+=10;});
+    y+=8;doc.setDrawColor(220,220,220);doc.setLineWidth(0.5);doc.line(M,y,W-M,y);y+=12;
+  });
+
+  // Firmas
+  if(y>640){doc.addPage();y=M;}else y+=20;
+  doc.setDrawColor(...BLUE);doc.setLineWidth(1);doc.line(M,y,W-M,y);y+=40;
+  const colW=(W-2*M)/2;
+  doc.setDrawColor(80,80,80);doc.setLineWidth(0.8);
+  doc.line(M+10,y,M+colW-20,y);doc.line(M+colW+20,y,W-M-10,y);y+=14;
+  doc.setTextColor(...DARK);doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text(state.name,M+colW/2-10,y,{align:'center'});
+  doc.text('Dr. Luis Rodríguez',M+colW+colW/2,y,{align:'center'});y+=13;
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(90,90,90);
+  doc.text('Firma del residente ('+state.grade+')',M+colW/2-10,y,{align:'center'});
+  doc.text('Jefe de Residentes y Enseñanza',M+colW+colW/2,y,{align:'center'});y+=12;
+  doc.setFontSize(8);doc.setTextColor(...GRAY);
+  doc.text('Hospital Belga — Cochabamba, Bolivia',M+colW+colW/2,y,{align:'center'});
+
+  // Footer
+  const ph=doc.internal.pageSize.getHeight();
+  doc.setDrawColor(...BLUE);doc.setLineWidth(0.5);doc.line(M,ph-40,W-M,ph-40);
+  doc.setFontSize(7.5);doc.setTextColor(...GRAY);
+  doc.text('Examen de Cardiología · Residencia de Medicina Interna · Hospital Belga · Generado automáticamente',W/2,ph-28,{align:'center'});
+
+  const safe=state.name.replace(/[^a-z0-9]/gi,'_');
+  doc.save(`Examen_Cardiologia_${safe}_${state.grade}.pdf`);
+}
+</script>
+</body>
+</html>
